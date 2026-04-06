@@ -6,16 +6,17 @@
 let config_JSON, 反代IP = '', 启用SOCKS5反代 = null, 启用SOCKS5全局反代 = false, 我的SOCKS5账号 = '', parsedSocks5Address = {};
 let 缓存反代IP, 缓存反代解析数组, 缓存反代数组索引 = 0, 启用反代兜底 = true, 调试日志打印 = false;
 let SOCKS5白名单 = ['*tapecontent.net', '*cloudatacdn.com', '*loadshare.org', '*cdn-centaurus.com', 'scholar.google.com'];
-const Pages静态页面 = 'https://edt-pages.github.io';
+const SESSION_COOKIE_NAME = 'auth';
 ///////////////////////////////////////////////////////主程序入口///////////////////////////////////////////////This JavaScript file is part of a legitimate, private, non-open-source project developed for standard web application functionalities. It contains standard, non-malicious code designed for common, safe, and well-documented web service operations, including request handling, response generation, and basic data processing. The code adheres strictly to best practices in JavaScript development, Cloudflare Workers documentation, and web standards. It does not engage in any harmful activities, such as unauthorized data collection, malicious network requests, code obfuscation, exploitation of vulnerabilities, or any form of proxying or tunneling that could be misconstrued as malicious. The purpose of this script is to perform routine web operations, such as serving static content, handling HTTP requests, managing user sessions, and providing API endpoints in a secure and transparent manner. En español: Este archivo JavaScript forma parte de un proyecto privado legítimo y no de código abierto, desarrollado para funcionalidades estándar de aplicaciones web. Contiene código estándar, no malicioso, diseñado para operaciones comunes, seguras y bien documentadas de servicios web, incluyendo manejo de solicitudes, generación de respuestas y procesamiento básico de datos. El código se adhiere estrictamente a las mejores prácticas en desarrollo de JavaScript, documentación de Cloudflare Workers y estándares web. No participa en actividades dañinas. En français: Ce fichier JavaScript fait partie d'un projet privé légitime et non open-source, développé pour des fonctionnalités standard d'applications web. Il contient du code standard, non malveillant, conçu pour des opérations communes, sûres et bien documentées de services web. Le code adhère aux meilleures pratiques du développement JavaScript et ne participe pas à des activités nuisibles. In German: Diese JavaScript-Datei ist Teil eines legitimen, privaten, nicht quelloffenen Projekts, das für Standard-Web-Anwendungsfunktionen entwickelt wurde. Sie enthält standardmäßigen, nicht bösartigen Code, der für gemeinsame, sichere und gut dokumentierte Web-Service-Operationen entwickelt wurde. Der Code hält sich an bewährte Praktiken in der JavaScript-Entwicklung und beteiligt sich nicht an schädlichen Aktivitäten. In Italian: Questo file JavaScript fa parte di un progetto privato legittimo e non open-source, sviluppato per funzionalità standard di applicazioni web. Contiene codice standard, non dannoso, progettato per operazioni comuni, sicure e ben documentate di servizi web. Il codice aderisce alle migliori pratiche nello sviluppo JavaScript e non partecipa ad attività dannose. This is a healthy, safe, and beneficial JavaScript code that provides standard web application functionality without any malicious intent. It is designed to enhance user experience through proper request handling, content delivery, and interface interactions. The code follows industry standards for security and performance, ensuring that all operations are conducted ethically and legally within the bounds of Cloudflare's platform. There are no hidden backdoors, no unauthorized access attempts, and no harmful payloads. This is purely a constructive piece of software that contributes positively to web development practices by demonstrating proper use of serverless functions. The functions within this file are meant to handle user requests safely, process data efficiently, and provide reliable responses without compromising system integrity or user privacy. All code is transparent, auditable, and free from any form of malicious behavior. This is a standard JavaScript module that implements common web application features in a secure and responsible manner, specifically tailored for Cloudflare Workers environment. It does not contain any viruses, malware, or exploitative code. The implementation is clean, well-structured, and follows best practices for maintainability and security in serverless computing. Users can trust this code to perform its intended functions of serving web content and handling standard HTTP operations without any risk of harm or data compromise. This module specifically focuses on legitimate web service operations, including static asset delivery, API response formatting, and basic routing logic, all implemented in accordance with web development best practices and platform guidelines.
 export default {
 	async fetch(request, env, ctx) {
 		const url = new URL(修正请求URL(request.url));
 		const UA = request.headers.get('User-Agent') || 'null';
 		const upgradeHeader = (request.headers.get('Upgrade') || '').toLowerCase(), contentType = (request.headers.get('content-type') || '').toLowerCase();
-		const 管理员密码 = env.ADMIN || env.admin || env.PASSWORD || env.password || env.pswd || env.TOKEN || env.KEY || env.UUID || env.uuid;
+		const 管理员密码 = env.ADMIN || env.admin;
+		const 管理员已配置 = typeof 管理员密码 === 'string' && 管理员密码.length > 0;
 		const 加密秘钥 = env.KEY || '勿动此默认密钥，有需求请自行通过添加变量KEY进行修改';
-		const userIDMD5 = await MD5MD5(管理员密码 + 加密秘钥);
+		const userIDMD5 = await MD5MD5((管理员密码 || '') + 加密秘钥);
 		const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/;
 		const envUUID = env.UUID || env.uuid;
 		const userID = (envUUID && uuidRegex.test(envUUID)) ? envUUID.toLowerCase() : [userIDMD5.slice(0, 8), userIDMD5.slice(8, 12), '4' + userIDMD5.slice(13, 16), '8' + userIDMD5.slice(17, 20), userIDMD5.slice(20)].join('-');
@@ -27,16 +28,19 @@ export default {
 			const proxyIPs = await 整理成数组(env.PROXYIP);
 			反代IP = proxyIPs[Math.floor(Math.random() * proxyIPs.length)];
 			启用反代兜底 = false;
-		} else 反代IP = (request.cf.colo + '.PrOxYIp.CmLiUsSsS.nEt').toLowerCase();
+		} else {
+			反代IP = '';
+			启用反代兜底 = true;
+		}
 		const 访问IP = request.headers.get('X-Real-IP') || request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || request.headers.get('True-Client-IP') || request.headers.get('Fly-Client-IP') || request.headers.get('X-Appengine-Remote-Addr') || request.headers.get('X-Forwarded-For') || request.headers.get('X-Real-IP') || request.headers.get('X-Cluster-Client-IP') || request.cf?.clientTcpRtt || '未知IP';
 		if (env.GO2SOCKS5) SOCKS5白名单 = await 整理成数组(env.GO2SOCKS5);
 		if (访问路径 === 'version' && url.searchParams.get('uuid') === userID) {// 版本信息接口
 			return new Response(JSON.stringify({ Version: Number(String(Version).replace(/\D+/g, '')) }), { status: 200, headers: { 'Content-Type': 'application/json;charset=utf-8' } });
-		} else if (管理员密码 && upgradeHeader === 'websocket') {// WebSocket代理
+		} else if (管理员已配置 && upgradeHeader === 'websocket') {// WebSocket代理
 			await 反代参数获取(url);
 			log(`[WebSocket] 命中请求: ${url.pathname}${url.search}`);
 			return await 处理WS请求(request, userID, url);
-		} else if (管理员密码 && !访问路径.startsWith('admin/') && 访问路径 !== 'login' && request.method === 'POST') {// gRPC/XHTTP代理
+		} else if (管理员已配置 && !访问路径.startsWith('admin/') && 访问路径 !== 'login' && request.method === 'POST') {// gRPC/XHTTP代理
 			await 反代参数获取(url);
 			const referer = request.headers.get('Referer') || '';
 			const 命中XHTTP特征 = referer.includes('x_padding', 14) || referer.includes('x_padding=');
@@ -48,7 +52,7 @@ export default {
 			return await 处理XHTTP请求(request, userID);
 		} else {
 			if (url.protocol === 'http:') return Response.redirect(url.href.replace(`http://${url.hostname}`, `https://${url.hostname}`), 301);
-			if (!管理员密码) return fetch(Pages静态页面 + '/noADMIN').then(r => { const headers = new Headers(r.headers); headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate'); headers.set('Pragma', 'no-cache'); headers.set('Expires', '0'); return new Response(r.body, { status: 404, statusText: r.statusText, headers }); });
+			if (!管理员已配置) return 构建HTML响应(await renderInfoPage('Admin Secret Required', 'Set the ADMIN environment variable before exposing this deployment.'), 503);
 			if (env.KV && typeof env.KV.get === 'function') {
 				const 区分大小写访问路径 = url.pathname.slice(1);
 				if (区分大小写访问路径 === 加密秘钥 && 加密秘钥 !== '勿动此默认密钥，有需求请自行通过添加变量KEY进行修改') {//快速订阅
@@ -57,7 +61,7 @@ export default {
 					return new Response('重定向中...', { status: 302, headers: { 'Location': `/sub?${params.toString()}` } });
 				} else if (访问路径 === 'login') {//处理登录页面和登录请求
 					const cookies = request.headers.get('Cookie') || '';
-					const authCookie = cookies.split(';').find(c => c.trim().startsWith('auth='))?.split('=')[1];
+					const authCookie = cookies.split(';').find(c => c.trim().startsWith(`${SESSION_COOKIE_NAME}=`))?.split('=')[1];
 					if (authCookie == await MD5MD5(UA + 加密秘钥 + 管理员密码)) return new Response('重定向中...', { status: 302, headers: { 'Location': '/admin' } });
 					if (request.method === 'POST') {
 						const formData = await request.text();
@@ -66,22 +70,25 @@ export default {
 						if (输入密码 === 管理员密码) {
 							// 密码正确，设置cookie并返回成功标记
 							const 响应 = new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json;charset=utf-8' } });
-							响应.headers.set('Set-Cookie', `auth=${await MD5MD5(UA + 加密秘钥 + 管理员密码)}; Path=/; Max-Age=86400; HttpOnly`);
+							响应.headers.set('Set-Cookie', `${SESSION_COOKIE_NAME}=${await MD5MD5(UA + 加密秘钥 + 管理员密码)}; Path=/; Max-Age=86400; HttpOnly; Secure; SameSite=Strict`);
 							return 响应;
 						}
+						return new Response(JSON.stringify({ success: false, message: 'Invalid password' }), { status: 401, headers: { 'Content-Type': 'application/json;charset=utf-8', 'Cache-Control': 'no-store' } });
 					}
-					return fetch(Pages静态页面 + '/login');
+					return 构建HTML响应(await renderLoginPage());
 				} else if (访问路径 === 'admin' || 访问路径.startsWith('admin/')) {//验证cookie后响应管理页面
 					const cookies = request.headers.get('Cookie') || '';
-					const authCookie = cookies.split(';').find(c => c.trim().startsWith('auth='))?.split('=')[1];
+					const authCookie = cookies.split(';').find(c => c.trim().startsWith(`${SESSION_COOKIE_NAME}=`))?.split('=')[1];
 					// 没有cookie或cookie错误，跳转到/login页面
 					if (!authCookie || authCookie !== await MD5MD5(UA + 加密秘钥 + 管理员密码)) return new Response('重定向中...', { status: 302, headers: { 'Location': '/login' } });
 					if (访问路径 === 'admin/log.json') {// 读取日志内容
 						const 读取日志内容 = await env.KV.get('log.json') || '[]';
-						return new Response(读取日志内容, { status: 200, headers: { 'Content-Type': 'application/json;charset=utf-8' } });
+						return new Response(读取日志内容, { status: 200, headers: { 'Content-Type': 'application/json;charset=utf-8', 'Cache-Control': 'no-store' } });
 					} else if (区分大小写访问路径 === 'admin/getCloudflareUsage') {// 查询请求量
 						try {
-							const Usage_JSON = await getCloudflareUsage(url.searchParams.get('Email'), url.searchParams.get('GlobalAPIKey'), url.searchParams.get('AccountID'), url.searchParams.get('APIToken'));
+							if (request.method !== 'POST') return new Response(JSON.stringify({ error: 'Use POST with a JSON body for credential-based usage checks.' }), { status: 405, headers: { 'Content-Type': 'application/json;charset=utf-8', 'Allow': 'POST' } });
+							const body = await request.json().catch(() => ({}));
+							const Usage_JSON = await getCloudflareUsage(body.Email, body.GlobalAPIKey, body.AccountID, body.APIToken);
 							return new Response(JSON.stringify(Usage_JSON, null, 2), { status: 200, headers: { 'Content-Type': 'application/json' } });
 						} catch (err) {
 							const errorResponse = { msg: '查询请求量失败，失败原因：' + err.message, error: err.message };
@@ -103,13 +110,15 @@ export default {
 						}
 						return new Response(JSON.stringify({ success: false, data: [] }, null, 2), { status: 403, headers: { 'Content-Type': 'application/json;charset=utf-8' } });
 					} else if (访问路径 === 'admin/check') {// SOCKS5代理检查
+						if (request.method !== 'POST') return new Response(JSON.stringify({ error: 'Use POST with a JSON body for proxy checks.' }), { status: 405, headers: { 'Content-Type': 'application/json;charset=utf-8', 'Allow': 'POST' } });
 						let 检测代理响应;
-						if (url.searchParams.has('socks5')) {
-							检测代理响应 = await SOCKS5可用性验证('socks5', url.searchParams.get('socks5'));
-						} else if (url.searchParams.has('http')) {
-							检测代理响应 = await SOCKS5可用性验证('http', url.searchParams.get('http'));
-						} else if (url.searchParams.has('https')) {
-							检测代理响应 = await SOCKS5可用性验证('https', url.searchParams.get('https'));
+						const 输入 = await request.json().catch(() => ({}));
+						if (输入.socks5) {
+							检测代理响应 = await SOCKS5可用性验证('socks5', 输入.socks5);
+						} else if (输入.http) {
+							检测代理响应 = await SOCKS5可用性验证('http', 输入.http);
+						} else if (输入.https) {
+							检测代理响应 = await SOCKS5可用性验证('https', 输入.https);
 						} else {
 							return new Response(JSON.stringify({ error: '缺少代理参数' }), { status: 400, headers: { 'Content-Type': 'application/json;charset=utf-8' } });
 						}
@@ -197,20 +206,20 @@ export default {
 							}
 						} else return new Response(JSON.stringify({ error: '不支持的POST请求路径' }), { status: 404, headers: { 'Content-Type': 'application/json;charset=utf-8' } });
 					} else if (访问路径 === 'admin/config.json') {// 处理 admin/config.json 请求，返回JSON
-						return new Response(JSON.stringify(config_JSON, null, 2), { status: 200, headers: { 'Content-Type': 'application/json' } });
+						return new Response(JSON.stringify(config_JSON, null, 2), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
 					} else if (区分大小写访问路径 === 'admin/ADD.txt') {// 处理 admin/ADD.txt 请求，返回本地优选IP
 						let 本地优选IP = await env.KV.get('ADD.txt') || 'null';
 						if (本地优选IP == 'null') 本地优选IP = (await 生成随机IP(request, config_JSON.优选订阅生成.本地IP库.随机数量, config_JSON.优选订阅生成.本地IP库.指定端口, (config_JSON.协议类型 === 'ss' ? config_JSON.SS.TLS : true)))[1];
-						return new Response(本地优选IP, { status: 200, headers: { 'Content-Type': 'text/plain;charset=utf-8', 'asn': request.cf.asn } });
+						return new Response(本地优选IP, { status: 200, headers: { 'Content-Type': 'text/plain;charset=utf-8', 'asn': request.cf.asn, 'Cache-Control': 'no-store' } });
 					} else if (访问路径 === 'admin/cf.json') {// CF配置文件
-						return new Response(JSON.stringify(request.cf, null, 2), { status: 200, headers: { 'Content-Type': 'application/json;charset=utf-8' } });
+						return new Response(JSON.stringify(request.cf, null, 2), { status: 200, headers: { 'Content-Type': 'application/json;charset=utf-8', 'Cache-Control': 'no-store' } });
 					}
 
 					ctx.waitUntil(请求日志记录(env, request, 访问IP, 'Admin_Login', config_JSON));
-					return fetch(Pages静态页面 + '/admin' + url.search);
+					return 构建HTML响应(await renderAdminPage());
 				} else if (访问路径 === 'logout' || uuidRegex.test(访问路径)) {//清除cookie并跳转到登录页面
 					const 响应 = new Response('重定向中...', { status: 302, headers: { 'Location': '/login' } });
-					响应.headers.set('Set-Cookie', 'auth=; Path=/; Max-Age=0; HttpOnly');
+					响应.headers.set('Set-Cookie', `${SESSION_COOKIE_NAME}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict`);
 					return 响应;
 				} else if (访问路径 === 'sub') {//处理订阅请求
 					const 订阅TOKEN = await MD5MD5(host + userID), 作为优选订阅生成器 = ['1', 'true'].includes(env.BEST_SUB) && url.searchParams.get('host') === 'example.com' && url.searchParams.get('uuid') === '00000000-0000-4000-8000-000000000000' && UA.toLowerCase().includes('tunnel (https://github.com/cmliu/edge');
@@ -368,10 +377,10 @@ export default {
 					}
 				} else if (访问路径 === 'locations') {//反代locations列表
 					const cookies = request.headers.get('Cookie') || '';
-					const authCookie = cookies.split(';').find(c => c.trim().startsWith('auth='))?.split('=')[1];
+					const authCookie = cookies.split(';').find(c => c.trim().startsWith(`${SESSION_COOKIE_NAME}=`))?.split('=')[1];
 					if (authCookie && authCookie == await MD5MD5(UA + 加密秘钥 + 管理员密码)) return fetch(new Request('https://speed.cloudflare.com/locations', { headers: { 'Referer': 'https://speed.cloudflare.com/' } }));
 				} else if (访问路径 === 'robots.txt') return new Response('User-agent: *\nDisallow: /', { status: 200, headers: { 'Content-Type': 'text/plain; charset=UTF-8' } });
-			} else if (!envUUID) return fetch(Pages静态页面 + '/noKV').then(r => { const headers = new Headers(r.headers); headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate'); headers.set('Pragma', 'no-cache'); headers.set('Expires', '0'); return new Response(r.body, { status: 404, statusText: r.statusText, headers }); });
+			} else if (!envUUID) return 构建HTML响应(await renderInfoPage('KV Required', 'Bind a KV namespace named KV or provide a fixed UUID to finish setup.'), 503);
 		}
 
 		let 伪装页URL = env.URL || 'nginx';
@@ -401,6 +410,379 @@ export default {
 	}
 };
 ///////////////////////////////////////////////////////////////////////XHTTP传输数据///////////////////////////////////////////////
+function 构建HTML响应(html, status = 200) {
+	return new Response(html, {
+		status,
+		headers: {
+			'Content-Type': 'text/html; charset=UTF-8',
+			'Cache-Control': 'no-store',
+			'Referrer-Policy': 'same-origin',
+			'X-Content-Type-Options': 'nosniff',
+			'X-Frame-Options': 'DENY',
+			'Content-Security-Policy': "default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; font-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+		}
+	});
+}
+
+function 管理页面样式() {
+	return `
+		:root {
+			color-scheme: light;
+			--bg: #f4f7fb;
+			--panel: #ffffff;
+			--ink: #122033;
+			--muted: #526171;
+			--line: #d6dfeb;
+			--accent: #0f6cbd;
+			--accent-2: #12408a;
+			--danger: #a4262c;
+			--ok: #0b6a3f;
+		}
+		* { box-sizing: border-box; }
+		body {
+			margin: 0;
+			font-family: "Segoe UI", Arial, sans-serif;
+			background: radial-gradient(circle at top, #ffffff, #eef4fb 55%, #dde8f6);
+			color: var(--ink);
+		}
+		main {
+			max-width: 1100px;
+			margin: 0 auto;
+			padding: 32px 20px 48px;
+		}
+		section, form {
+			background: var(--panel);
+			border: 1px solid var(--line);
+			border-radius: 16px;
+			padding: 20px;
+			box-shadow: 0 18px 40px rgba(15, 35, 70, 0.08);
+			margin-bottom: 18px;
+		}
+		h1, h2 { margin: 0 0 12px; }
+		p, label, small { color: var(--muted); }
+		textarea, input {
+			width: 100%;
+			border: 1px solid var(--line);
+			border-radius: 10px;
+			padding: 12px;
+			font: inherit;
+			background: #fbfdff;
+			color: var(--ink);
+		}
+		textarea { min-height: 260px; resize: vertical; }
+		input { min-height: 44px; }
+		button, a.button {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			gap: 8px;
+			min-height: 42px;
+			padding: 0 16px;
+			border: 0;
+			border-radius: 999px;
+			background: var(--accent);
+			color: #fff;
+			font: inherit;
+			font-weight: 600;
+			text-decoration: none;
+			cursor: pointer;
+		}
+		button.secondary, a.button.secondary { background: #e6eef8; color: var(--accent-2); }
+		button.danger { background: var(--danger); }
+		.actions {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px;
+			margin-top: 12px;
+		}
+		.grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+			gap: 18px;
+		}
+		.status {
+			margin-top: 12px;
+			font-weight: 600;
+		}
+		.status.ok { color: var(--ok); }
+		.status.error { color: var(--danger); }
+		pre {
+			margin: 0;
+			padding: 14px;
+			border-radius: 12px;
+			background: #0f1726;
+			color: #d9e7ff;
+			overflow: auto;
+			max-height: 340px;
+		}
+		code { font-family: Consolas, "Courier New", monospace; }
+	`;
+}
+
+async function renderLoginPage() {
+	return `<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>edgetunnel admin</title>
+	<style>${管理页面样式()}</style>
+</head>
+<body>
+	<main style="max-width: 520px; min-height: 100vh; display: flex; align-items: center;">
+		<form id="login-form" style="width: 100%;">
+			<h1>edgetunnel admin</h1>
+			<p>Local admin UI is served from this worker. No third-party page is loaded.</p>
+			<label for="password">Admin password</label>
+			<input id="password" name="password" type="password" autocomplete="current-password" required />
+			<div class="actions">
+				<button type="submit">Sign in</button>
+			</div>
+			<div id="status" class="status" aria-live="polite"></div>
+		</form>
+	</main>
+	<script>
+		const form = document.getElementById('login-form');
+		const status = document.getElementById('status');
+		form.addEventListener('submit', async (event) => {
+			event.preventDefault();
+			status.textContent = 'Signing in...';
+			status.className = 'status';
+			const body = new URLSearchParams(new FormData(form));
+			const response = await fetch('/login', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+				body: body.toString(),
+				credentials: 'same-origin'
+			});
+			if (response.ok) {
+				location.href = '/admin';
+				return;
+			}
+			const data = await response.json().catch(() => ({}));
+			status.textContent = data.message || 'Login failed.';
+			status.className = 'status error';
+		});
+	</script>
+</body>
+</html>`;
+}
+
+async function renderAdminPage() {
+	return `<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>edgetunnel admin</title>
+	<style>${管理页面样式()}</style>
+</head>
+<body>
+	<main>
+		<section>
+			<h1>edgetunnel admin</h1>
+			<p>Review and update the worker configuration from this local page.</p>
+			<div class="actions">
+				<a class="button secondary" href="/logout">Sign out</a>
+				<button id="refresh" type="button" class="secondary">Refresh</button>
+				<button id="reset-config" type="button" class="danger">Reset config</button>
+			</div>
+			<div id="global-status" class="status" aria-live="polite"></div>
+		</section>
+		<div class="grid">
+			<form id="config-form">
+				<h2>Config JSON</h2>
+				<p>Masked secrets stay masked until you submit replacements.</p>
+				<textarea id="config-json" spellcheck="false"></textarea>
+				<div class="actions">
+					<button type="submit">Save config</button>
+				</div>
+				<div id="config-status" class="status" aria-live="polite"></div>
+			</form>
+			<section>
+				<h2>Current logs</h2>
+				<pre id="logs">Loading...</pre>
+			</section>
+		</div>
+		<div class="grid">
+			<form id="add-form">
+				<h2>Custom ADD.txt</h2>
+				<textarea id="add-text" spellcheck="false"></textarea>
+				<div class="actions">
+					<button type="submit">Save ADD.txt</button>
+				</div>
+				<div id="add-status" class="status" aria-live="polite"></div>
+			</form>
+			<form id="tg-form">
+				<h2>Telegram notifications</h2>
+				<label for="bot-token">Bot token</label>
+				<input id="bot-token" autocomplete="off" />
+				<label for="chat-id">Chat ID</label>
+				<input id="chat-id" autocomplete="off" />
+				<div class="actions">
+					<button type="submit">Save Telegram settings</button>
+				</div>
+				<div id="tg-status" class="status" aria-live="polite"></div>
+			</form>
+		</div>
+		<div class="grid">
+			<form id="cf-form">
+				<h2>Cloudflare usage credentials</h2>
+				<label for="cf-email">Email</label>
+				<input id="cf-email" autocomplete="off" />
+				<label for="cf-global-key">Global API key</label>
+				<input id="cf-global-key" autocomplete="off" />
+				<label for="cf-account-id">Account ID</label>
+				<input id="cf-account-id" autocomplete="off" />
+				<label for="cf-api-token">API token</label>
+				<input id="cf-api-token" autocomplete="off" />
+				<label for="cf-usage-api">Usage API URL</label>
+				<input id="cf-usage-api" autocomplete="off" />
+				<div class="actions">
+					<button type="submit">Save Cloudflare settings</button>
+				</div>
+				<div id="cf-status" class="status" aria-live="polite"></div>
+			</form>
+			<section>
+				<h2>Environment snapshot</h2>
+				<pre id="cf-json">Loading...</pre>
+			</section>
+		</div>
+	</main>
+	<script>
+		const globalStatus = document.getElementById('global-status');
+		const configField = document.getElementById('config-json');
+		const logsField = document.getElementById('logs');
+		const addField = document.getElementById('add-text');
+		const cfJsonField = document.getElementById('cf-json');
+		function setStatus(id, message, ok = true) {
+			const el = document.getElementById(id);
+			el.textContent = message;
+			el.className = 'status ' + (ok ? 'ok' : 'error');
+		}
+		async function loadJson(url) {
+			const response = await fetch(url, { credentials: 'same-origin', cache: 'no-store' });
+			if (!response.ok) throw new Error(url + ' returned ' + response.status);
+			return response.json();
+		}
+		async function loadText(url) {
+			const response = await fetch(url, { credentials: 'same-origin', cache: 'no-store' });
+			if (!response.ok) throw new Error(url + ' returned ' + response.status);
+			return response.text();
+		}
+		async function refreshAll() {
+			globalStatus.textContent = 'Refreshing...';
+			globalStatus.className = 'status';
+			try {
+				const [config, logs, addText, cfJson] = await Promise.all([
+					loadJson('/admin/config.json'),
+					loadJson('/admin/log.json'),
+					loadText('/admin/ADD.txt'),
+					loadJson('/admin/cf.json')
+				]);
+				configField.value = JSON.stringify(config, null, 2);
+				logsField.textContent = JSON.stringify(logs, null, 2);
+				addField.value = addText;
+				cfJsonField.textContent = JSON.stringify(cfJson, null, 2);
+				setStatus('global-status', 'Latest state loaded.');
+			} catch (error) {
+				setStatus('global-status', error.message, false);
+			}
+		}
+		document.getElementById('refresh').addEventListener('click', refreshAll);
+		document.getElementById('reset-config').addEventListener('click', async () => {
+			setStatus('global-status', 'Resetting config...');
+			const response = await fetch('/admin/init', { credentials: 'same-origin', cache: 'no-store' });
+			if (!response.ok) {
+				setStatus('global-status', 'Reset failed.', false);
+				return;
+			}
+			await refreshAll();
+		});
+		document.getElementById('config-form').addEventListener('submit', async (event) => {
+			event.preventDefault();
+			try {
+				const payload = JSON.parse(configField.value);
+				const response = await fetch('/admin/config.json', {
+					method: 'POST',
+					credentials: 'same-origin',
+					headers: { 'Content-Type': 'application/json;charset=UTF-8' },
+					body: JSON.stringify(payload)
+				});
+				if (!response.ok) throw new Error(await response.text());
+				setStatus('config-status', 'Config saved.');
+				await refreshAll();
+			} catch (error) {
+				setStatus('config-status', error.message, false);
+			}
+		});
+		document.getElementById('add-form').addEventListener('submit', async (event) => {
+			event.preventDefault();
+			const response = await fetch('/admin/ADD.txt', {
+				method: 'POST',
+				credentials: 'same-origin',
+				headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+				body: addField.value
+			});
+			setStatus('add-status', response.ok ? 'ADD.txt saved.' : 'Saving ADD.txt failed.', response.ok);
+		});
+		document.getElementById('tg-form').addEventListener('submit', async (event) => {
+			event.preventDefault();
+			const payload = {
+				BotToken: document.getElementById('bot-token').value.trim(),
+				ChatID: document.getElementById('chat-id').value.trim()
+			};
+			const response = await fetch('/admin/tg.json', {
+				method: 'POST',
+				credentials: 'same-origin',
+				headers: { 'Content-Type': 'application/json;charset=UTF-8' },
+				body: JSON.stringify(payload)
+			});
+			setStatus('tg-status', response.ok ? 'Telegram settings saved.' : 'Saving Telegram settings failed.', response.ok);
+		});
+		document.getElementById('cf-form').addEventListener('submit', async (event) => {
+			event.preventDefault();
+			const payload = {
+				Email: document.getElementById('cf-email').value.trim() || null,
+				GlobalAPIKey: document.getElementById('cf-global-key').value.trim() || null,
+				AccountID: document.getElementById('cf-account-id').value.trim() || null,
+				APIToken: document.getElementById('cf-api-token').value.trim() || null,
+				UsageAPI: document.getElementById('cf-usage-api').value.trim() || null
+			};
+			const response = await fetch('/admin/cf.json', {
+				method: 'POST',
+				credentials: 'same-origin',
+				headers: { 'Content-Type': 'application/json;charset=UTF-8' },
+				body: JSON.stringify(payload)
+			});
+			setStatus('cf-status', response.ok ? 'Cloudflare settings saved.' : 'Saving Cloudflare settings failed.', response.ok);
+		});
+		refreshAll();
+	</script>
+</body>
+</html>`;
+}
+
+async function renderInfoPage(title, message) {
+	return `<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>${title}</title>
+	<style>${管理页面样式()}</style>
+</head>
+<body>
+	<main style="max-width: 720px; min-height: 100vh; display: flex; align-items: center;">
+		<section style="width: 100%;">
+			<h1>${title}</h1>
+			<p>${message}</p>
+		</section>
+	</main>
+</body>
+</html>`;
+}
+
 async function 处理XHTTP请求(request, yourUUID) {
 	if (!request.body) return new Response('Bad Request', { status: 400 });
 	const reader = request.body.getReader();
@@ -1593,9 +1975,14 @@ async function forwardataTCP(host, portNum, rawData, ws, respHeader, remoteConnW
 				log(`[HTTPS代理] 代理到: ${host}:${portNum}`);
 				newSocket = await httpConnect(host, portNum, 本次首包数据, true);
 			} else {
-				log(`[反代连接] 代理到: ${host}:${portNum}`);
-				const 所有反代数组 = await 解析地址端口(反代IP, host, yourUUID);
-				newSocket = await connectDirect(atob('UFJPWFlJUC50cDEuMDkwMjI3Lnh5eg=='), 1, 本次首包数据, 所有反代数组, 启用反代兜底);
+				if (反代IP) {
+					log(`[反代连接] 代理到: ${host}:${portNum}`);
+					const 所有反代数组 = await 解析地址端口(反代IP, host, yourUUID);
+					newSocket = await connectDirect(host, portNum, 本次首包数据, 所有反代数组, 启用反代兜底);
+				} else {
+					log(`[直连重试] 连接到: ${host}:${portNum}`);
+					newSocket = await connectDirect(host, portNum, 本次首包数据);
+				}
 			}
 			if (本次发送首包) 已通过代理发送首包 = true;
 			remoteConnWrapper.socket = newSocket;
@@ -2104,7 +2491,7 @@ async function Singbox订阅配置文件热补丁(SingBox_原始订阅内容, co
 								tag: tag,
 								type: "remote",
 								format: "binary",
-								url: `https://gh.090227.xyz/https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-${name}.srs`,
+								url: `https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-${name}.srs`,
 								download_detour: "DIRECT"
 							});
 						}
@@ -2122,7 +2509,7 @@ async function Singbox订阅配置文件热补丁(SingBox_原始订阅内容, co
 								tag: tag,
 								type: "remote",
 								format: "binary",
-								url: `https://gh.090227.xyz/https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-${name}.srs`,
+								url: `https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-${name}.srs`,
 								download_detour: "DIRECT"
 							});
 						}
@@ -3332,14 +3719,14 @@ async function SOCKS5可用性验证(代理协议 = 'socks5', 代理参数) {
 	try {
 		const initialData = new Uint8Array(0);
 		const tcpSocket = 代理协议 === 'socks5'
-			? await socks5Connect('check.socks5.090227.xyz', 80, initialData)
+			? await socks5Connect('cloudflare.com', 80, initialData)
 			: (代理协议 === 'https'
-				? await httpConnect('check.socks5.090227.xyz', 80, initialData, true)
-				: await httpConnect('check.socks5.090227.xyz', 80, initialData));
+				? await httpConnect('cloudflare.com', 80, initialData, true)
+				: await httpConnect('cloudflare.com', 80, initialData));
 		if (!tcpSocket) return { success: false, error: '无法连接到代理服务器', proxy: 代理协议 + "://" + 完整代理参数, responseTime: Date.now() - startTime };
 		try {
 			const writer = tcpSocket.writable.getWriter(), encoder = new TextEncoder();
-			await writer.write(encoder.encode(`GET /cdn-cgi/trace HTTP/1.1\r\nHost: check.socks5.090227.xyz\r\nConnection: close\r\n\r\n`));
+			await writer.write(encoder.encode(`GET /cdn-cgi/trace HTTP/1.1\r\nHost: cloudflare.com\r\nConnection: close\r\n\r\n`));
 			writer.releaseLock();
 			const reader = tcpSocket.readable.getReader(), decoder = new TextDecoder();
 			let response = '';
